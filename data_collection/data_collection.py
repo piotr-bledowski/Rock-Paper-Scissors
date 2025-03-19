@@ -1,9 +1,11 @@
 import os
 import numpy as np
 import mediapipe as mp
+import cv2
 from pynput import keyboard
 
-from gestures import ACTION_TO_IDX
+from .gestures import ACTION_TO_IDX
+from .utils import draw_landmarks, add_window_text, countdown
 
 
 class DataCollector:
