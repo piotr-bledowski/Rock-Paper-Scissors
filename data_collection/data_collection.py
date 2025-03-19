@@ -3,8 +3,7 @@ import numpy as np
 import mediapipe as mp
 from pynput import keyboard
 
-from helpers import *
-from actions import ACTION_TO_IDX
+from gestures import ACTION_TO_IDX
 
 
 class DataCollector:
