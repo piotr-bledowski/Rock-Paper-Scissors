@@ -57,18 +57,17 @@ class DataCollector:
             f.write(f'{sample_num},{action}\n')
 
 
-    def save_image(self, cap, sample_num, frame):
+    def save_image(self, cap, sample_num):
         _, image = cap.read()
-        if frame is not None:
-            image = cv2.resize(image, dsize=(160, 120), interpolation=cv2.INTER_CUBIC)
-            cv2.imwrite(os.path.join(self.tmp_path, str(sample_num), f'{frame}.jpg'), image)
+        image = cv2.resize(image, dsize=(160, 120), interpolation=cv2.INTER_CUBIC)
+        cv2.imwrite(os.path.join(self.tmp_path, f'{sample_num}.jpg'), image)
 
 
     def record_samples(self):
-        samples = [int(dir) for dir in os.listdir(self.tmp_path) if os.path.isdir(os.path.join(self.tmp_path, dir))]
+        samples = [int(dir[:-4]) for dir in os.listdir(self.tmp_path) if dir != 'annotations.csv']
         n_samples = 0 if not samples else sorted(samples)[len(samples)-1]+1
-        sequences = 500  # max number of samples to record
-        frames = 100  # max number of frames per sample
+        sequences = 100  # max number of samples to record
+        # frames = 100  # max number of frames per sample
         cap = cv2.VideoCapture(0)
 
         with mp.solutions.holistic.Holistic(min_detection_confidence=0.75, min_tracking_confidence=0.75) as holistic:
@@ -91,19 +90,12 @@ class DataCollector:
                         cv2.destroyAllWindows()
                         return
 
-                os.makedirs(f'{os.path.join(self.tmp_path, str(n_samples))}')
+                #os.makedirs(f'{os.path.join(self.tmp_path, str(n_samples))}')
                 print(f"Collection data for: {action} sequence no: {sequence}.")
                 countdown(cap, holistic)
 
                 # Collect sample
-                for frame in range(frames):
-                    self.save_image(cap, n_samples, frame)
-                    image = draw_landmarks(cap, holistic)
-                    cv2.putText(image, f"Collecting frames. Action: {action} frame no: {frame}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
-                    cv2.putText(image, f"Press ESC to stop recording", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
-                    cv2.imshow('Camera', image)
-                    if cv2.waitKey(1) == 113:  # q to stop recording
-                        break
+                self.save_image(cap, n_samples)
                 self.annotate_sample(n_samples, action)
 
                 if cv2.waitKey(1) & 0xFF == 27:  # ESC key to exit

@@ -61,7 +61,7 @@ def countdown(cap, holistic):
     while time.time() < start + 3:
         seconds_left = int(start + 3 - time.time()) + 1
         image = draw_landmarks(cap, holistic)
-        cv2.putText(image, f'Begin in {seconds_left}', (250, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2,
+        cv2.putText(image, f'Recording in {seconds_left}', (250, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2,
                     cv2.LINE_AA)
         cv2.imshow('Camera', image)
 
