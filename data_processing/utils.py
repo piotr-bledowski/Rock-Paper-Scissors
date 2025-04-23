@@ -8,15 +8,11 @@ def extract_landmarks(img: np.ndarray, holistic: mp.solutions.holistic.Holistic)
     r = results.right_hand_landmarks
     l = results.left_hand_landmarks
 
-    landmarks = None
-
     if r:
-        landmarks = [[landmark.x, landmark.y, landmark.z] for landmark in r.landmark]
-    elif l:
-        landmarks = [[landmark.x, landmark.y, landmark.z] for landmark in l.landmark]
-    
-    return np.array(landmarks)
-
+        return [[landmark.x, landmark.y, landmark.z] for landmark in r.landmark]
+    if l:
+        return [[landmark.x, landmark.y, landmark.z] for landmark in l.landmark]
+    return None
 
 def base_distance_transform(landmarks: np.ndarray) -> np.ndarray:
     result = []
