@@ -14,6 +14,7 @@ def extract_landmarks(img: np.ndarray, holistic: mp.solutions.holistic.Holistic)
         return [[landmark.x, landmark.y, landmark.z] for landmark in l.landmark]
     return None
 
+
 def base_distance_transform(landmarks: np.ndarray) -> np.ndarray:
     result = []
     base = landmarks[0]
@@ -23,8 +24,3 @@ def base_distance_transform(landmarks: np.ndarray) -> np.ndarray:
         result.append(np.linalg.norm(base, landmarks[i]))
     
     return result
-
-
-img = cv2.imread('data/136.jpg')
-img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-print(extract_landmarks(img).shape)
