@@ -3,8 +3,7 @@ import mediapipe as mp
 import cv2
 
 
-def extract_landmarks(img: np.ndarray) -> np.ndarray:
-    holistic = mp.solutions.holistic.Holistic(min_detection_confidence=0.75, min_tracking_confidence=0.75)
+def extract_landmarks(img: np.ndarray, holistic: mp.solutions.holistic.Holistic) -> np.ndarray:
     results = holistic.process(img)
     r = results.right_hand_landmarks
     l = results.left_hand_landmarks
