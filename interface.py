@@ -1,11 +1,12 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-# from joblib import load
+from joblib import load
 
-# model = load('model.pkl')
+#Load the trained model
+model = load('gesture_model.pkl')
 
-# RPSLS logic
+# RPSLS game rules
 rules = {
     'rock': ['scissors', 'lizard'],
     'paper': ['rock', 'spock'],
@@ -22,7 +23,7 @@ def decide_winner(gesture1, gesture2):
     else:
         return "Player 2 Wins"
 
-# Color per gesture
+#Color per gesture
 gesture_colors = {
     'rock': (0, 255, 0),
     'paper': (255, 0, 0),
@@ -32,24 +33,25 @@ gesture_colors = {
     'Detecting...': (100, 100, 100)
 }
 
-# Real-time landmark utilities (safe for mediapipe.Hands)
-def extract_landmarks(hand_landmarks):
-    return [[lm.x, lm.y] for lm in hand_landmarks.landmark]
+#Real-time landmark extraction
+def extract_landmarks_xyz(hand_landmarks):
+    return np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark]).flatten()
 
-def base_distance_transform(landmarks):
-    base = np.array([landmarks[0][0], landmarks[0][1]])
-    return np.array([np.linalg.norm(np.array([lm[0], lm[1]]) - base) for lm in landmarks])
-
-# Mediapipe setup
-mp_hands = mp.solutions.hands
+#Mediapipe Holistic setup
+mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
-hands = mp_hands.Hands(static_image_mode=False, max_num_hands=2,
-                       min_detection_confidence=0.5, min_tracking_confidence=0.5)
+holistic = mp_holistic.Holistic(static_image_mode=False,
+                                model_complexity=1,
+                                smooth_landmarks=True,
+                                enable_segmentation=False,
+                                refine_face_landmarks=True,
+                                min_detection_confidence=0.5,
+                                min_tracking_confidence=0.5)
 
-# Webcam start
+#Start webcam
 cap = cv2.VideoCapture(0)
 print("[INFO] Webcam started – Press ESC to exit")
-frame_count = 0  # Used for flashing animation
+frame_count = 0
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -57,28 +59,42 @@ while cap.isOpened():
         break
 
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = hands.process(image)
+    results = holistic.process(image)
     height, width, _ = frame.shape
     hands_data = []
 
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+    #Process Left and Right hands separately
+    for hand_type, hand_landmarks in [('left', results.left_hand_landmarks), ('right', results.right_hand_landmarks)]:
+        if hand_landmarks:
+            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
-            landmark_list = extract_landmarks(hand_landmarks)
-            center_x = landmark_list[0][0]
-            distances = base_distance_transform(landmark_list)
+            landmarks = extract_landmarks_xyz(hand_landmarks)
 
-            # Placeholder for prediction
-            # gesture = model.predict([distances])[0]
-            # confidence = np.max(model.predict_proba([distances])) * 100
-            gesture = "Detecting..."
-            confidence = 0
+            if landmarks.shape[0] > 60:
+                landmarks = landmarks[:60]
+            elif landmarks.shape[0] < 60:
+                landmarks = np.pad(landmarks, (0, 60 - landmarks.shape[0]))
 
-            hands_data.append({'x': center_x, 'gesture': gesture, 'conf': confidence})
+            center_x = hand_landmarks.landmark[0].x
 
+            #Predict gesture
+            gesture = model.predict([landmarks])[0]
+            confidence = np.max(model.predict_proba([landmarks])) * 100
+
+            #Print real-time prediction
+            print(f"{hand_type.title()} hand - Predicted: {gesture} | Confidence: {confidence:.2f}%")
+
+            #Only accept prediction if confidence > 60%
+            if confidence > 60:
+                final_gesture = gesture
+            else:
+                final_gesture = "Detecting..."
+
+            hands_data.append({'x': center_x, 'gesture': final_gesture, 'conf': confidence})
+
+    #Sort and decide winner
     if len(hands_data) == 2:
-        hands_data.sort(key=lambda h: h['x'])
+        hands_data.sort(key=lambda h: h['x'])  # leftmost = player 1
         p1, p2 = hands_data[0], hands_data[1]
 
         g1, g2 = p1['gesture'], p2['gesture']
@@ -110,10 +126,10 @@ while cap.isOpened():
         cv2.putText(frame, "No hands detected", (10, 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 100, 255), 2)
 
-    cv2.imshow("RPSLS - Inference", frame)
+    cv2.imshow("RPSLS - Inference (Holistic)", frame)
     frame_count += 1
 
-    if cv2.waitKey(1) & 0xFF == 27:
+    if cv2.waitKey(1) & 0xFF == 27:  # ESC to quit
         print("[INFO] Exiting...")
         break
 
