@@ -1,4 +1,5 @@
 data/
+!data/prepare_dataset.py
 venv/
 __pycache__/
 *.pkl
