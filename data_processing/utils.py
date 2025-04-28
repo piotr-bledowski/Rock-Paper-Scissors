@@ -21,6 +21,7 @@ def base_distance_transform(landmarks: np.ndarray) -> np.ndarray:
 
     for i in range(1, len(landmarks)):
         # calculate euclidean distance between each landmark and base
-        result.append(np.linalg.norm(base, landmarks[i]))
+        result.append(np.sqrt(np.sum((np.array(base) - np.array(landmarks[i])) ** 2)))
+        #result.append(np.linalg.norm(base, landmarks[i]))
     
     return result

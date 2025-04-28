@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from joblib import load
+from data_processing.utils import extract_landmarks, base_distance_transform
 
 #Load the trained model
 model = load('gesture_model.pkl')
@@ -35,7 +36,7 @@ gesture_colors = {
 
 #Real-time landmark extraction
 def extract_landmarks_xyz(hand_landmarks):
-    return np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark]).flatten()
+    return np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark])
 
 #Mediapipe Holistic setup
 mp_holistic = mp.solutions.holistic
@@ -69,11 +70,12 @@ while cap.isOpened():
             mp_drawing.draw_landmarks(frame, hand_landmarks, mp_holistic.HAND_CONNECTIONS)
 
             landmarks = extract_landmarks_xyz(hand_landmarks)
+            landmarks = np.array(base_distance_transform(landmarks))
 
-            if landmarks.shape[0] > 60:
-                landmarks = landmarks[:60]
-            elif landmarks.shape[0] < 60:
-                landmarks = np.pad(landmarks, (0, 60 - landmarks.shape[0]))
+            # if landmarks.shape[0] > 60:
+            #     landmarks = landmarks[:60]
+            # elif landmarks.shape[0] < 60:
+            #     landmarks = np.pad(landmarks, (0, 60 - landmarks.shape[0]))
 
             center_x = hand_landmarks.landmark[0].x
 
@@ -82,7 +84,7 @@ while cap.isOpened():
             confidence = np.max(model.predict_proba([landmarks])) * 100
 
             #Print real-time prediction
-            print(f"{hand_type.title()} hand - Predicted: {gesture} | Confidence: {confidence:.2f}%")
+            print(f"{hand_type} hand - Predicted: {gesture} | Confidence: {confidence:.2f}%")
 
             #Only accept prediction if confidence > 60%
             if confidence > 60:

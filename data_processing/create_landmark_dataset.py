@@ -25,7 +25,7 @@ def create_dataset(path: str, transform: Callable[[np.ndarray], np.ndarray] = No
                 landmarks = transform(landmarks)
 
             data['x'].append(landmarks)
-            data['y'].append(label)
+            data['y'].append(label[1])
 
     with open('data.pkl', 'wb') as f:
         pickle.dump(data, f)

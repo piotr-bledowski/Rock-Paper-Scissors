@@ -11,10 +11,12 @@ with open('data.pkl', 'rb') as f:
 X = np.array([np.array(sample).flatten() for sample in data['x']])
 y = np.array(data['y'])
 
+print(f" Before strong cleaning: {y.shape[0]} samples")
+
 # Strong cleaning
-X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)  # Replace NaN and Inf with 0
-too_large = np.abs(X) > 1e6  # Anything larger than 1 million
-X[too_large] = 0.0
+# X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)  # Replace NaN and Inf with 0
+# too_large = np.abs(X) > 1e6  # Anything larger than 1 million
+# X[too_large] = 0.0
 
 print(f" After strong cleaning: {X.shape[0]} samples")
 
