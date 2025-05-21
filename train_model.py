@@ -12,6 +12,15 @@ X = np.array([np.array(sample).flatten() for sample in data['x']])
 y = np.array(data['y'])
 
 print(f" Before strong cleaning: {y.shape[0]} samples")
+# Apply Min-Max Scaling per sample
+def minmax_scale(x):
+    return (x - np.min(x)) / (np.max(x) - np.min(x) + 1e-6)
+
+X_scaled = np.array([minmax_scale(sample) for sample in X])
+print("[DEBUG] First scaled sample (min/max):", np.min(X_scaled[0]), "/", np.max(X_scaled[0]))
+print("[DEBUG] Sample values:", X_scaled[0][:5], "...")
+
+
 
 # Strong cleaning
 # X = np.nan_to_num(X, nan=0.0, posinf=0.0, neginf=0.0)  # Replace NaN and Inf with 0
@@ -21,8 +30,9 @@ print(f" Before strong cleaning: {y.shape[0]} samples")
 print(f" After strong cleaning: {X.shape[0]} samples")
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42, stratify=y
+    X_scaled, y, test_size=0.2, random_state=42, stratify=y
 )
+
 
 clf = RandomForestClassifier(n_estimators=100, random_state=42)
 clf.fit(X_train, y_train)

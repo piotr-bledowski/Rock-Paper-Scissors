@@ -72,6 +72,11 @@ while cap.isOpened():
             landmarks = extract_landmarks_xyz(hand_landmarks)
             landmarks = np.array(base_distance_transform(landmarks))
 
+            # Apply Min-Max Scaling
+            landmarks = (landmarks - np.min(landmarks)) / (np.max(landmarks) - np.min(landmarks) + 1e-6)
+            print(f"[DEBUG] Scaled input for {hand_type} hand — min: {np.min(landmarks):.4f}, max: {np.max(landmarks):.4f}")
+            print(f"[DEBUG] Sample input values: {landmarks[:5]} ...")
+
             # if landmarks.shape[0] > 60:
             #     landmarks = landmarks[:60]
             # elif landmarks.shape[0] < 60:
