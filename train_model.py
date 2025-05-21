@@ -2,6 +2,7 @@ import pickle
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import numpy as np
 
 with open('data.pkl', 'rb') as f:
@@ -10,6 +11,10 @@ with open('data.pkl', 'rb') as f:
 # Flatten landmarks
 X = np.array([np.array(sample).flatten() for sample in data['x']])
 y = np.array(data['y'])
+
+# normalize transformed landmarks
+# minmax = MinMaxScaler()
+# X = minmax.fit_transform(X)
 
 print(f" Before strong cleaning: {y.shape[0]} samples")
 

@@ -72,6 +72,10 @@ while cap.isOpened():
             landmarks = extract_landmarks_xyz(hand_landmarks)
             landmarks = np.array(base_distance_transform(landmarks))
 
+            # # normalize transformed landmarks
+            # minmax = MinMaxScaler()
+            # X = minmax.fit_transform(X)
+
             # if landmarks.shape[0] > 60:
             #     landmarks = landmarks[:60]
             # elif landmarks.shape[0] < 60:
@@ -87,7 +91,7 @@ while cap.isOpened():
             print(f"{hand_type} hand - Predicted: {gesture} | Confidence: {confidence:.2f}%")
 
             #Only accept prediction if confidence > 60%
-            if confidence > 60:
+            if confidence > 50:
                 final_gesture = gesture
             else:
                 final_gesture = "Detecting..."

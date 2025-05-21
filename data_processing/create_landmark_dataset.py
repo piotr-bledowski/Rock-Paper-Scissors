@@ -17,7 +17,8 @@ def create_dataset(path: str, transform: Callable[[np.ndarray], np.ndarray] = No
 
     for row in annotations.iterrows():
         idx, label = row
-        img = cv2.cvtColor(cv2.imread(os.path.join(path, f'{idx}.jpg')), cv2.COLOR_BGR2RGB)
+        print(label[0])
+        img = cv2.cvtColor(cv2.imread(os.path.join(path, f'{label[0]}.jpg')), cv2.COLOR_BGR2RGB)
         landmarks = extract_landmarks(img, holistic)
 
         if landmarks:
