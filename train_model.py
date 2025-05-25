@@ -5,6 +5,7 @@ from sklearn.metrics import classification_report, accuracy_score
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 import numpy as np
 
+
 with open('data.pkl', 'rb') as f:
     data = pickle.load(f)
 
@@ -43,11 +44,11 @@ clf = RandomForestClassifier(n_estimators=100, random_state=42)
 clf.fit(X_train, y_train)
 
 y_pred = clf.predict(X_test)
-print(" Model Accuracy:", accuracy_score(y_test, y_pred))
+print("Model Accuracy:", accuracy_score(y_test, y_pred))
 print("\n Classification Report:")
 print(classification_report(y_test, y_pred))
 
 with open('gesture_model.pkl', 'wb') as f:
     pickle.dump(clf, f)
 
-print(" Model saved to gesture_model.pkl")
+print("Model saved to gesture_model.pkl")
