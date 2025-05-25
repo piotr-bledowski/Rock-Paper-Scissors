@@ -18,13 +18,13 @@ def extract_landmarks(img: np.ndarray, holistic: mp.solutions.holistic.Holistic)
 def base_distance_transform(landmarks: np.ndarray) -> np.ndarray:
     result = []
     base = landmarks[0]
+    middle_finger_tip = landmarks[12]
+    ring_finger_tip = landmarks[16]
 
     for i in range(1, len(landmarks)):
         # calculate euclidean distance between each landmark and base
-        # result.append(np.sqrt(np.sum((np.array(base) - np.array(landmarks[i])) ** 2)))
-
-        for j in range(len(base)):
-            result.append(landmarks[i][j] - base[j])
-        #result.append(np.linalg.norm(base, landmarks[i]))
+        result.append(np.sqrt(np.sum((np.array(base) - np.array(landmarks[i])) ** 2)))
+    
+    result.append(np.sqrt(np.sum((np.array(middle_finger_tip) - np.array(ring_finger_tip)) ** 2)))
     
     return result
