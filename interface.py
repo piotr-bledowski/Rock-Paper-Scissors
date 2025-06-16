@@ -4,8 +4,10 @@ import numpy as np
 from joblib import load
 from data_processing.utils import extract_landmarks, base_distance_transform
 from player_detection import PlayerDetector
+from game_logic import RPSLSGame, GameState
+from game_gui import GameWindow
 
-#Load the trained model
+# Load the trained model
 model = load('gesture_model.pkl')
 
 # RPSLS game rules
@@ -25,7 +27,7 @@ def decide_winner(gesture1, gesture2):
     else:
         return "Player 2 Wins"
 
-#Color per gesture
+# Color per gesture
 gesture_colors = {
     'rock': (0, 255, 0),
     'paper': (255, 0, 0),
@@ -35,7 +37,7 @@ gesture_colors = {
     'Detecting...': (100, 100, 100)
 }
 
-#Real-time landmark extraction
+# Real-time landmark extraction
 def extract_landmarks_xyz(hand_landmarks):
     return np.array([[lm.x, lm.y, lm.z] for lm in hand_landmarks.landmark])
 
@@ -56,7 +58,7 @@ def create_scaled_landmarks(original_landmarks, player_idx):
     
     return scaled_landmarks
 
-#Mediapipe Holistic setup
+# Mediapipe Holistic setup
 mp_holistic = mp.solutions.holistic
 mp_drawing = mp.solutions.drawing_utils
 holistic = mp_holistic.Holistic(static_image_mode=False,
@@ -67,20 +69,8 @@ holistic = mp_holistic.Holistic(static_image_mode=False,
                                 min_detection_confidence=0.5,
                                 min_tracking_confidence=0.5)
 
-# Initialize player detector
-player_detector = PlayerDetector()
-
-#Start webcam
-cap = cv2.VideoCapture(0)
-print("[INFO] Webcam started – Press ESC to exit")
-frame_count = 0
-game_active = False
-
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
-
+def process_frame(frame, game):
+    """Process a single frame and return the processed frame"""
     # Detect players
     players_present, player1_frame, player2_frame, visualization = player_detector.detect_players(frame)
     
@@ -92,12 +82,8 @@ while cap.isOpened():
     # Draw a white vertical line separating the two halves on display frame
     cv2.line(display_frame, (half_width, 0), (half_width, height), (255, 255, 255), 2)
     
-    # Only process gestures if two players are detected
-    if players_present:
-        if not game_active:
-            print("[INFO] Two players detected! Game activated.")
-            game_active = True
-            
+    # Only process gestures if two players are detected and game is active
+    if players_present and game.state != GameState.WAITING_FOR_PLAYERS:
         # Process the full frame once with MediaPipe
         image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = holistic.process(image_rgb)
@@ -105,9 +91,6 @@ while cap.isOpened():
         # Create copies of each half for display
         player1_display = player1_frame.copy()
         player2_display = player2_frame.copy()
-        
-        # Store results for each player
-        player_results = []
         
         # Process left and right hands and assign to the correct player based on position
         hands_data = []
@@ -193,6 +176,7 @@ while cap.isOpened():
             })
         
         # Process the results for each player
+        player_gestures = {}
         for player_idx in range(2):
             # Find hands for this player
             player_hands = [h for h in hands_data if h['player'] == player_idx + 1]
@@ -201,13 +185,7 @@ while cap.isOpened():
             if player_hands:
                 # Use the hand with highest confidence
                 best_hand = max(player_hands, key=lambda h: h['confidence'])
-                
-                # Add player to results
-                player_results.append({
-                    'player': player_idx + 1,
-                    'gesture': best_hand['gesture'],
-                    'confidence': best_hand['confidence']
-                })
+                player_gestures[player_idx] = best_hand['gesture']
                 
                 # Draw gesture on player's display frame
                 color = gesture_colors.get(best_hand['gesture'], (255, 255, 255))
@@ -215,11 +193,6 @@ while cap.isOpened():
                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
             else:
                 # No hands detected for this player
-                player_results.append({
-                    'player': player_idx + 1,
-                    'gesture': "Detecting...",
-                    'confidence': 0
-                })
                 cv2.putText(player_display, f"Player {player_idx+1}: No hand detected", 
                            (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (100, 100, 255), 2)
         
@@ -227,45 +200,32 @@ while cap.isOpened():
         display_frame[:, :half_width] = player1_display
         display_frame[:, half_width:] = player2_display
         
-        # Determine winner if both players have valid gestures
-        if len(player_results) == 2:
-            g1, g2 = player_results[0]['gesture'], player_results[1]['gesture']
+        # Process round result if both players have gestures and round is active
+        if len(player_gestures) == 2 and game.state == GameState.ROUND_ACTIVE:
+            p1_gesture = player_gestures.get(0, "Detecting...")
+            p2_gesture = player_gestures.get(1, "Detecting...")
             
-            if g1 != "Detecting..." and g2 != "Detecting...":
-                result = decide_winner(g1, g2)
-                
-                # Display result
-                if result != "Draw":
-                    if (frame_count // 10) % 2 == 0:  # Blinking effect
-                        cv2.putText(display_frame, f"🏆 {result} 🏆", 
-                                   (width // 2 - 150, height - 30),
-                                   cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 255), 3)
-                else:
-                    cv2.putText(display_frame, f"Result: {result}", 
-                               (width // 2 - 100, height - 30),
-                               cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
-            else:
-                cv2.putText(display_frame, "Waiting for gestures...", 
-                           (width // 2 - 150, height - 30),
-                           cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+            if p1_gesture != "Detecting..." and p2_gesture != "Detecting...":
+                game.process_round_result(p1_gesture, p2_gesture)
     else:
         # If no players detected, show waiting message
-        if game_active:
-            print("[INFO] Players lost! Game deactivated.")
-            game_active = False
-            
         cv2.putText(display_frame, "Waiting for two players...", 
                    (width // 2 - 150, height - 30),
                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
     
-    # Display the single combined frame
-    cv2.imshow("Rock Paper Scissors Lizard Spock", display_frame)
+    return display_frame
+
+# Initialize player detector
+player_detector = PlayerDetector()
+
+def main():
+    from PyQt5.QtWidgets import QApplication
+    import sys
     
-    frame_count += 1
+    app = QApplication(sys.argv)
+    window = GameWindow()
+    window.show()
+    sys.exit(app.exec_())
 
-    if cv2.waitKey(1) & 0xFF == 27:  # ESC to quit
-        print("[INFO] Exiting...")
-        break
-
-cap.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    main()
