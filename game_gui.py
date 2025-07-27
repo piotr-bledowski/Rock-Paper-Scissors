@@ -5,7 +5,7 @@ import mediapipe as mp
 from joblib import load
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                             QHBoxLayout, QLabel, QPushButton, QRadioButton, 
-                            QButtonGroup, QFrame, QGridLayout, QSizePolicy, QCheckBox)
+                            QButtonGroup, QFrame, QGridLayout, QSizePolicy, QCheckBox, QDialog)
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QThread
 from PyQt5.QtGui import QImage, QPixmap, QFont, QPalette, QColor
 from game_logic import RPSLSGame, GameState
@@ -465,6 +465,11 @@ class GameWindow(QMainWindow):
         countdown_layout.addWidget(self.countdown_checkbox)
         left_layout.addWidget(countdown_frame)
         
+        # Instructions button
+        self.instructions_button = QPushButton("📋 Show Instructions")
+        self.instructions_button.clicked.connect(self.toggle_instructions)
+        left_layout.addWidget(self.instructions_button)
+        
         # Start button
         self.start_button = QPushButton("🚀 Start Game")
         self.start_button.clicked.connect(self.start_game)
@@ -539,6 +544,7 @@ class GameWindow(QMainWindow):
         # Initialize game
         self.game = None
         self.video_thread = None
+        self.instructions_window = None
         
         # Set window size
         self.setMinimumSize(1200, 700)
@@ -591,6 +597,24 @@ class GameWindow(QMainWindow):
         self.result_label.setText("")
         self.video_label.setText("📹 Camera feed will appear here")
         
+    def toggle_instructions(self):
+        """Toggle the display of the instructions window"""
+        if self.instructions_window is None or not self.instructions_window.isVisible():
+            # Show instructions
+            self.instructions_window = InstructionsWindow(self)
+            self.instructions_window.show()
+            self.instructions_button.setText("📋 Hide Instructions")
+            
+            # Connect the window's close event to update button text
+            def on_instructions_closed():
+                self.instructions_button.setText("📋 Show Instructions")
+            
+            self.instructions_window.finished.connect(on_instructions_closed)
+        else:
+            # Hide instructions
+            self.instructions_window.close()
+            self.instructions_button.setText("📋 Show Instructions")
+        
     def update_video(self, qt_image):
         # Scale image to fit label while maintaining aspect ratio
         scaled_pixmap = QPixmap.fromImage(qt_image).scaled(
@@ -639,7 +663,74 @@ class GameWindow(QMainWindow):
             self.timer.stop()
         if hasattr(self, 'game') and self.game:
             self.game.stop_timers()
+        if self.instructions_window:
+            self.instructions_window.close()
         event.accept()
+
+class InstructionsWindow(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Game Instructions")
+        self.setModal(False)  # Allow interaction with main window
+        
+        # Set up the layout
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Create label to display the image
+        self.image_label = QLabel()
+        self.image_label.setAlignment(Qt.AlignCenter)
+        
+        # Load and display the PNG image
+        try:
+            pixmap = QPixmap("game_instructions.png")
+            if not pixmap.isNull():
+                # Scale the image to fit screen while maintaining aspect ratio
+                scaled_pixmap = pixmap.scaled(800, 600, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                self.image_label.setPixmap(scaled_pixmap)
+            else:
+                self.image_label.setText("Could not load game_instructions.png")
+        except Exception as e:
+            self.image_label.setText(f"Error loading instructions: {str(e)}")
+        
+        layout.addWidget(self.image_label)
+        
+        # Close button
+        close_button = QPushButton("Close")
+        close_button.clicked.connect(self.close)
+        close_button.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #1e3c72, stop:0.5 #2a5298, stop:1 #1e3c72);
+                color: #ffffff;
+                border: 2px solid #4a90e2;
+                padding: 8px 16px;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #2a5298, stop:0.5 #4a90e2, stop:1 #2a5298);
+                border: 2px solid #87ceeb;
+            }
+        """)
+        layout.addWidget(close_button, alignment=Qt.AlignCenter)
+        
+        # Set window size and styling
+        self.resize(850, 700)
+        self.setStyleSheet("""
+            QDialog {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #0a0a2e, stop:0.3 #16213e, stop:0.6 #0f3460, stop:1 #533483);
+            }
+            QLabel {
+                background: rgba(255, 255, 255, 0.1);
+                border: 2px solid rgba(74, 144, 226, 0.5);
+                border-radius: 10px;
+                padding: 10px;
+            }
+        """)
 
 def main():
     app = QApplication(sys.argv)
